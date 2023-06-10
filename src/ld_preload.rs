@@ -25,22 +25,27 @@ macro_rules! hook {
 
         impl $real_fn {
             fn get(&self) -> unsafe extern fn ( $($v : $t),* ) -> $r {
-                use ::std::sync::Once;
-
-                static mut REAL: *const u8 = 0 as *const u8;
-                static mut ONCE: Once = Once::new();
+                static REAL: $crate::OnceNonZeroUsize = $crate::OnceNonZeroUsize::new();
 
                 unsafe {
-                    ONCE.call_once(|| {
-                        REAL = $crate::ld_preload::dlsym_next(concat!(stringify!($real_fn), "\0"));
+                    let f = REAL.get_or_init(|| {
+                        let ptr = $crate::ld_preload::dlsym_next(concat!(stringify!($real_fn), "\0"));
+                        ::core::num::NonZeroUsize::new_unchecked(ptr as usize)
                     });
-                    ::std::mem::transmute(REAL)
+                    ::core::mem::transmute(f.get() as *const u8)
                 }
             }
 
+            #[cfg(feature = "std")]
             #[no_mangle]
             pub unsafe extern fn $real_fn ( $($v : $t),* ) -> $r {
                 ::std::panic::catch_unwind(|| $hook_fn ( $($v),* )).unwrap_or_else(|_| $real_fn.get() ( $($v),* ))
+            }
+
+            #[cfg(not(feature = "std"))]
+            #[no_mangle]
+            pub unsafe extern fn $real_fn ( $($v : $t),* ) -> $r {
+                { $hook_fn ( $($v),* ) }
             }
         }
 

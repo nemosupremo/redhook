@@ -21,8 +21,14 @@ macro_rules! hook {
             pub fn $real_fn ( $($v : $t),* ) -> $r;
         }
 
+        #[cfg(feature = "std")]
         pub unsafe extern fn $hook_fn ( $($v : $t),* ) -> $r {
             ::std::panic::catch_unwind(|| $body ).unwrap_or_else(|_| $real_fn ( $($v),* ))
+        }
+
+        #[cfg(not(feature = "std"))]
+        pub unsafe extern fn $hook_fn ( $($v : $t),* ) -> $r {
+            $body
         }
     };
 

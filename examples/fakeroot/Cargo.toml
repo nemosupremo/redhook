@@ -2,6 +2,7 @@
 name = "redhook_ex_fakeroot"
 version = "0.0.1"
 authors = ["Geoffrey Thomas <geofft@ldpreload.com>"]
+edition = "2021"
 
 [lib]
 name = "fakeroot"
